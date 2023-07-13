@@ -59,6 +59,7 @@
 .question {
   margin-bottom: 15px;
   font-size: large;
+  font-weight: bold;
 }
 
 .answers{
@@ -69,6 +70,7 @@
 
 .answer {
   padding: 6px;
+  margin: 2px;
   border-radius: 5px;
   width: 100%;
   display: flex;
@@ -98,4 +100,12 @@ button:hover {
 
 .key_wrapper {
   margin-top: 30px;
+}
+
+.error{
+  padding: 5px 8px 8px 8px;
+  margin: 10px;
+  border-radius: 10px;
+  background-color: red;
+  color: white;
 }

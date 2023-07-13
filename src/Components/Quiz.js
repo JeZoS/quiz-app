@@ -20,9 +20,9 @@ const initial_messages = [
   //   },
   {
     role: "system",
-    content: `Act as a mcq type quiz application you have to provide a random question, and provide four options for that question. One of the options will be the correct answer.
+    content: `Act as a vocabulary type quiz application you have to provide a random word, and provide four options for that word. One of the options will be the correct answer.
       Once I select an answer, inform me the result. Keep asking me questions until I ask you to stop.
-      Now, start with your question.`,
+      Now, start with your word.`,
     type: "internal",
   },
   //   {
@@ -68,14 +68,13 @@ let functions = [
   },
   {
     name: "get-question",
-    description:
-      "returns a random question every time and four meaningful options for a given question",
+    description: "returns a random word every time and four meaningful options for a given word",
     parameters: {
       type: "object",
       properties: {
-        question: {
+        word: {
           type: "string",
-          description: "generates a random question",
+          description: "generates a random word",
         },
         options: {
           type: "array",
@@ -85,7 +84,7 @@ let functions = [
           },
         },
       },
-      required: ["question", "options"],
+      required: ["word", "options"],
     },
   },
   {
@@ -95,8 +94,8 @@ let functions = [
       type: "object",
       properties: {
         answer: {
-          type: "boolean",
-          description: "true if provided ans is correct false if incorrect",
+          type: "string",
+          description: "correct answer",
         },
       },
     },
@@ -115,6 +114,7 @@ const QuizApp = () => {
   const [loading, setLoading] = useState(false);
   const [key, setKey] = useState(null);
   const [keyAdded, setKeyAdded] = useState(false);
+  const [error, seterror] = useState(false)
 
   const getWords = async () => {
     try {
@@ -188,6 +188,7 @@ const QuizApp = () => {
 
   const handleStartQuiz = async () => {
     try {
+        seterror(false)
       setAnswer(null);
       setLoading(true);
 
@@ -197,7 +198,7 @@ const QuizApp = () => {
         ...msgs,
         {
           role: "user",
-          content: `Question?`,
+          content: `Next word?`,
           type: "message",
         },
       ];
@@ -243,6 +244,9 @@ const QuizApp = () => {
           "Content-Type": "application/json",
         },
       });
+      if(resp?.data?.error){
+        seterror(true)
+      }
       if (resp?.data?.choices && resp.data.choices.length > 0) {
         let msg = resp.data.choices[0].message;
         let formatted_msg = { type: "message" };
@@ -253,13 +257,13 @@ const QuizApp = () => {
             formatted_msg.name = "get-question";
             formatted_msg.role = "function";
             setQuestion({
-              word: ques.question,
+              word: ques.word,
               options: [...ques.options],
             });
             setWords((prev) => {
               let n = prev;
-              if (!n.includes(ques.question)) {
-                n.push(ques.question);
+              if (!n.includes(ques.word)) {
+                n.push(ques.word);
               }
               return n;
             });
@@ -290,16 +294,19 @@ const QuizApp = () => {
       }
       setLoading(false);
     } catch (error) {
+        seterror(true)
       setCounter((prev) => +prev + 1);
       setLoading(false);
     }
   };
 
   const handleOptionSelect = (index) => {
+    if(answer != null) return
     setSelectedOption(index);
   };
 
   const handleSubmit = async () => {
+    seterror(false)
     if (![0, 1, 2, 3].includes(selectedOption)) {
       window.alert("Select an option first");
       return;
@@ -360,7 +367,9 @@ const QuizApp = () => {
         "Content-Type": "application/json",
       },
     });
-
+    if(resp?.data?.error){
+        seterror(true)
+      }
     if (resp.data.choices && resp.data.choices.length > 0) {
       let msg = resp.data.choices[0].message;
       //   let n_msg = { role: "assistant", content: msg.function_call.arguments, type: "message" };
@@ -396,7 +405,7 @@ const QuizApp = () => {
         <h1 className="header">QUIZ APP</h1>
         {question && (
           <div className="question_answer">
-            <div className="question">{question.word}</div>
+            <div className="question">Q .{words.length} -- {question.word} ?</div>
             <div className="answers">
               {question.options.map((option, index) => (
                 <div
@@ -404,12 +413,12 @@ const QuizApp = () => {
                   key={index}
                   style={{
                     border:
-                      selectedOption == index
-                        ? answer == null
-                          ? ""
-                          : answer
+                      answer != null
+                        ? option == answer
                           ? "3px solid green"
-                          : "2px solid red"
+                          : selectedOption == index && answer != option && answer != null
+                          ? "3px solid red"
+                          : ""
                         : "",
                   }}
                 >
@@ -434,6 +443,7 @@ const QuizApp = () => {
                 <button onClick={handleNext}>Next question</button>
               </div>
             )}
+            { error && <div className="error" >Please try again after 5 to 6 seconds</div> }
           </div>
         )}
         {question == null ? (
